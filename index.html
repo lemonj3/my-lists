@@ -503,6 +503,12 @@
     }
     .due-chip-btn:hover { border-color: var(--t3); background: var(--t1); color: var(--t-txt); }
     .due-chip-btn.no-due { border-style: dashed; }
+    .pri-chip-btn {
+      font-size: .7rem; font-weight: 600; padding: 2px 8px;
+      border-radius: 10px; border: 1px solid transparent;
+      cursor: pointer; font-family: inherit; transition: all .15s;
+    }
+    .pri-chip-btn:hover { border-color: var(--t3); }
     .due-edit-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
     .due-edit-row input[type="date"] {
       padding: 4px 8px; border: 1.5px solid var(--t3); border-radius: 10px;
@@ -828,7 +834,13 @@ function renderList() {
       : `<button class="due-chip-btn no-due" onclick="openDueEdit('${item.id}')">+ 기한</button>`;
     if (dd && !item.done) chips += `<span class="dday-chip ${dd.cls}">${dd.text}</span>`;
     if (item.qty)        chips += `<span class="qty-badge">수량 ${item.qty}개</span>`;
-    if (item.priority)   chips += `<span class="sub-chip priority-${item.priority}">${{high:'🔴 높음',medium:'🟡 보통',low:'🟢 낮음'}[item.priority]}</span>`;
+    if (item.cat === 'work') {
+      chips += item.priority
+        ? `<button class="pri-chip-btn priority-${item.priority}" onclick="openPriEdit('${item.id}')">${PRI_LABEL[item.priority]}</button>`
+        : `<button class="due-chip-btn no-due" onclick="openPriEdit('${item.id}')">+ 중요도</button>`;
+    } else if (item.priority) {
+      chips += `<span class="sub-chip priority-${item.priority}">${PRI_LABEL[item.priority]}</span>`;
+    }
     if (item.mediaType)  chips += `<span class="sub-chip media-${item.mediaType}">${{movie:'🎬 드라마/영화',show:'🎭 공연',exhibit:'🖼️ 전시',book:'📚 책',drama:'🎬 드라마/영화'}[item.mediaType]||item.mediaType}</span>`;
     const isSel = selectedIds.has(item.id);
     return `
@@ -852,6 +864,13 @@ function renderList() {
             <button class="due-save-btn" onclick="saveDue('${item.id}')">저장</button>
             <button class="due-clear-btn" onclick="clearDue('${item.id}')">기한 삭제</button>
             <button class="due-cancel-btn" onclick="closeDueEdit('${item.id}')">취소</button>
+          </div>
+          <div class="due-edit-row" id="pri-edit-${item.id}" style="display:none">
+            <button class="due-save-btn" onclick="setPri('${item.id}','high')">🔴 높음</button>
+            <button class="due-save-btn" onclick="setPri('${item.id}','medium')">🟡 보통</button>
+            <button class="due-save-btn" onclick="setPri('${item.id}','low')">🟢 낮음</button>
+            <button class="due-clear-btn" onclick="setPri('${item.id}','')">없음</button>
+            <button class="due-cancel-btn" onclick="closePriEdit('${item.id}')">취소</button>
           </div>
         </div>
         ${selectMode ? '' : `<button class="delete-btn" onclick="deleteItem('${item.id}')">×</button>`}
@@ -924,6 +943,24 @@ function closeTextEdit(id) {
   const el = document.getElementById(`text-edit-${id}`);
   if (el) el.style.display='none';
 }
+const PRI_LABEL = { high:'🔴 높음', medium:'🟡 보통', low:'🟢 낮음' };
+
+function openPriEdit(id) {
+  const el = document.getElementById(`pri-edit-${id}`);
+  if (el) el.style.display = 'flex';
+}
+function closePriEdit(id) {
+  const el = document.getElementById(`pri-edit-${id}`);
+  if (el) el.style.display = 'none';
+}
+async function setPri(id, val) {
+  const i = items.find(i => i.id === id);
+  if (!i) return;
+  i.priority = val || null;
+  render();
+  await dbUpdate(id, { priority: val || null });
+}
+
 const CATS = [
   { key:'shop',  label:'쇼핑',     icon:'🛒' },
   { key:'life',  label:'라이프',   icon:'🌿' },
